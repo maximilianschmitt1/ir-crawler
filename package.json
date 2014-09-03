@@ -2,5 +2,8 @@
   "dependencies": {
     "crawler": "^0.2.6",
     "superagent": "^0.18.2"
+  },
+  "scripts": {
+  	"start": "node index.js"
   }
 }
