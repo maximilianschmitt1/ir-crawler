@@ -1,53 +1,64 @@
 'use strict';
 
-var Crawler = require('crawler').Crawler;
-var request    = require('superagent');
-var numDocs = 0;
+var request = require('superagent');
+var cheerio = require('cheerio');
+var crawler = require('./crawler');
+var url     = require('url');
+
+var numDocs   = 0;
+var numPushed = 0;
 var numQueued = 0;
-var queueMax = 5000;
+var queueMax  = 10000;
 
-var c = new Crawler({
-	'maxConnections': 1,
-
-	// This will be called for each crawled page
-	callback: function(error, result, $) {
-		if (error || !$) {
-			return;
-		}
-
-		numDocs++;
-
-		if (numQueued <= queueMax) {
-			// $ is a jQuery instance scoped to the server-side DOM of the page
-			$('a').each(function(index, a) {
-				if (/(.*)\.uni-regensburg\.de\.*/.test(a.href) && numQueued <= queueMax) {
-					c.queue(a.href);
-					numQueued++;
-				}
-			});
-		}
-
-
-		var body = {
-			add: {
-				doc: {
-					id: result.uri,
-					url: result.uri,
-					title: $('title').text(),
-					content: $('body').text().split(/\s+/).join(' '),
-					description: $('meta[name=description]').attr('content'),
-					keywords: $('meta[name=keywords]').attr('content')
-				}
-			}
-		};
-
-		request
-			.post('localhost:8983/solr/update/?commit=true')
-			.send(body)
-			.end(function(res) {
-				console.log(res.statusCode + ' ' + result.uri);
-			});
+crawler.onUrlFetched = function(currentUrl, res) {
+	if (res.type !== 'text/html') {
+		return;
 	}
-});
 
-c.queue('http://www.uni-regensburg.de');
+	if (typeof res.text === 'undefined') {
+		return;
+	}
+
+	if (numDocs >= queueMax) {
+		crawler.stop();
+		return;
+	}
+
+	numDocs++;
+
+	var $ = cheerio.load(res.text);
+
+	$('a').each(function(index, a) {
+		var href = $(a).attr('href');
+		if (href) {
+			var nextLink = url.resolve(currentUrl, href.split('#')[0]);
+			if (/(http:\/\/|https:\/\/)(.*)\.uni-regensburg\.de\.*/.test(nextLink)) {
+				crawler.queue(nextLink);
+				numQueued++;
+			}
+		}
+	});
+
+	var body = {
+		add: {
+			doc: {
+				id: currentUrl,
+				url: currentUrl,
+				title: $('title').text(),
+				content: $('body').text().split(/\s+/).join(' ').trim(),
+				description: $('meta[name=description]').attr('content'),
+				keywords: $('meta[name=keywords]').attr('content')
+			}
+		}
+	};
+
+	request
+		.post('localhost:8983/solr/update/?commit=true')
+		.send(body)
+		.end(function(res) {
+			numPushed++;
+			console.log('(' + numPushed + '/' + numDocs + ')' + res.statusCode + ' ' + currentUrl);
+		});
+};
+
+crawler.queue('http://www.uni-regensburg.de');
