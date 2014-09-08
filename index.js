@@ -19,6 +19,10 @@ crawler.onUrlFetched = function(currentUrl, res) {
 		return;
 	}
 
+	if (res.statusCode !== 200) {
+		return;
+	}
+
 	if (numDocs >= queueMax) {
 		crawler.stop();
 		return;
@@ -57,7 +61,7 @@ crawler.onUrlFetched = function(currentUrl, res) {
 		.send(body)
 		.end(function(res) {
 			numPushed++;
-			console.log('(' + numPushed + '/' + numDocs + ')' + res.statusCode + ' ' + currentUrl);
+			console.log('(' + numPushed + '/' + numDocs + ') ' + res.statusCode + ' ' + currentUrl);
 		});
 };
 
