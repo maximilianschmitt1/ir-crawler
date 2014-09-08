@@ -5,6 +5,7 @@ var cheerio = require('cheerio');
 var crawler = require('./crawler');
 var url     = require('url');
 
+var followLinks = true;
 var numDocs   = 0;
 var numPushed = 0;
 var numQueued = 0;
@@ -32,16 +33,21 @@ crawler.onUrlFetched = function(currentUrl, res) {
 
 	var $ = cheerio.load(res.text);
 
-	$('a').each(function(index, a) {
-		var href = $(a).attr('href');
-		if (href) {
-			var nextLink = url.resolve(currentUrl, href.split('#')[0]);
-			if (/(http:\/\/|https:\/\/)(.*)\.uni-regensburg\.de\.*/.test(nextLink)) {
-				crawler.queue(nextLink);
-				numQueued++;
+	if (followLinks) {
+		$('a').each(function(index, a) {
+			var href = $(a).attr('href');
+			if (href) {
+				var nextLink = url.resolve(currentUrl, href.split('#')[0]);
+				if (/(http:\/\/|https:\/\/)(.*)\.uni-regensburg\.de\.*/.test(nextLink)) {
+					crawler.queue(nextLink);
+					numQueued++;
+				}
 			}
-		}
-	});
+		});
+	}
+
+	$('.navigation').remove();
+	$('.menu-left').remove();
 
 	var body = {
 		add: {
