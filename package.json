@@ -2,10 +2,11 @@
   "dependencies": {
     "async": "^0.9.0",
     "cheerio": "^0.17.0",
+    "heapdump": "^0.2.10",
     "md5": "^1.0.0",
+    "memwatch": "^0.2.2",
     "superagent": "^0.18.2",
-    "superagentparse": "^1.0.0",
-    "webkit-devtools-agent": "^0.3.1"
+    "superagentparse": "^1.0.0"
   },
   "scripts": {
     "start": "node index.js"
